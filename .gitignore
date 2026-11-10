@@ -1,0 +1,16 @@
+node_modules
+.next
+.env
+.env.local
+.vercel
+next-env.d.ts
+*.tsbuildinfo
+# dados financeiros reais nunca vão para o repositório
+/data
+/backup
+*.csv
+.DS_Store
+node_modules/
+.env
+.env.*
+!.env.example
