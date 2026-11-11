@@ -1,10 +1,10 @@
 // Converte os CSVs exportados do IOB Start em dados normalizados.
 //   npm run importar -- --origem "../Sistema Financeiro"            -> grava data/*.json (uso local)
-//   npm run importar -- --origem "../Sistema Financeiro" --sheets   -> também envia para a planilha Google
+//   npm run importar -- --origem "../Sistema Financeiro" --supabase -> também envia para o Supabase (substitui o que estiver lá)
 import fs from "node:fs";
 import path from "node:path";
 
-// carrega .env.local (se existir) para o envio à planilha
+// carrega .env.local (se existir) para o envio ao Supabase
 if (fs.existsSync(".env.local")) {
   for (const linha of fs.readFileSync(".env.local", "utf8").split(/\r?\n/)) {
     const m = /^([A-Z0-9_]+)=(.*)$/.exec(linha.trim());
@@ -19,7 +19,7 @@ const arg = (nome, padrao) => {
 };
 const origem = path.resolve(arg("origem", "backup"));
 const destino = path.resolve(arg("destino", "data"));
-const enviarSheets = args.includes("--sheets");
+const enviarSupabase = args.includes("--supabase");
 
 function lerCsv(arquivo) {
   const texto = fs.readFileSync(arquivo, "latin1");
@@ -131,39 +131,33 @@ for (const [nome, linhas] of Object.entries(tabelas)) {
   console.log(`${nome}: ${linhas.length} linhas`);
 }
 
-// ---------- envio para o Google Sheets ----------
-if (enviarSheets) {
-  const { google } = await import("googleapis");
-  const id = process.env.GOOGLE_SHEETS_ID;
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const chave = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-  if (!id || !email || !chave) {
-    console.error("Defina GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL e GOOGLE_PRIVATE_KEY (veja o README).");
+// ---------- envio para o Supabase ----------
+if (enviarSupabase) {
+  const { createClient } = await import("@supabase/supabase-js");
+  const url = process.env.SUPABASE_URL;
+  const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !chave) {
+    console.error("Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env.local (veja o README).");
     process.exit(1);
   }
-  const auth = new google.auth.JWT({ email, key: chave, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
-  const sheets = google.sheets({ version: "v4", auth });
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: id });
-  const existentes = new Set(meta.data.sheets.map((s) => s.properties.title));
+  const banco = createClient(url, chave, { auth: { persistSession: false } });
+  const nulo = (v) => (v === "" ? null : v);
+  const preparar = {
+    lancamentos: ({ id, ...l }) => ({ ...l, competencia: nulo(l.competencia) }),
+    programacoes: ({ id, ...p }) => ({ ...p, vencimento: nulo(p.vencimento) }),
+    pessoas: ({ id, ...p }) => ({ ...p, inativo: p.inativo === "sim" }),
+  };
   for (const [nome, linhas] of Object.entries(tabelas)) {
-    if (!linhas.length) continue;
-    if (!existentes.has(nome)) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: id,
-        requestBody: { requests: [{ addSheet: { properties: { title: nome } } }] },
-      });
+    const tabela = `fin_${nome}`;
+    // substitui o conteúdo: apaga tudo e insere de novo, em lotes de 1000
+    const apagar = await banco.from(tabela).delete().gte("id", 0);
+    if (apagar.error) { console.error(`${tabela}: ${apagar.error.message}`); process.exit(1); }
+    const prontas = linhas.map(preparar[nome]);
+    for (let i = 0; i < prontas.length; i += 1000) {
+      const { error } = await banco.from(tabela).insert(prontas.slice(i, i + 1000));
+      if (error) { console.error(`${tabela}: ${error.message}`); process.exit(1); }
     }
-    const cab = Object.keys(linhas[0]);
-    const valores = [cab, ...linhas.map((l) => cab.map((c) => l[c]))];
-    await sheets.spreadsheets.values.clear({ spreadsheetId: id, range: nome });
-    for (let i = 0; i < valores.length; i += 5000) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: id,
-        range: `${nome}!A${i + 1}`,
-        valueInputOption: "RAW",
-        requestBody: { values: valores.slice(i, i + 5000) },
-      });
-    }
-    console.log(`planilha: aba "${nome}" atualizada (${linhas.length} linhas)`);
+    const { count } = await banco.from(tabela).select("*", { count: "exact", head: true });
+    console.log(`supabase: ${tabela} com ${count} linhas`);
   }
 }

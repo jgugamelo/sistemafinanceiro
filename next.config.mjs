@@ -1,5 +1,3 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: { serverComponentsExternalPackages: ["googleapis"] },
-};
+const nextConfig = {};
 export default nextConfig;

@@ -42,7 +42,7 @@ export interface Pessoa {
   inativo: string;
 }
 
-/** Contrato da fonte de dados. Trocar de Google Sheets para Postgres é escrever outra implementação disto. */
+/** Contrato da fonte de dados. Hoje há duas implementações: arquivos locais (testes) e Supabase. */
 export interface Repositorio {
   lancamentos(): Promise<Lancamento[]>;
   programacoes(): Promise<Programacao[]>;
