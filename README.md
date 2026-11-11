@@ -23,10 +23,8 @@ Os CSVs e a pasta `data/` estão no `.gitignore`: dados financeiros não vão pa
 
 ## 2. Supabase como banco
 
-As tabelas `fin_lancamentos`, `fin_programacoes` e `fin_pessoas` já existem no projeto `qapkfezynuldhjlklhzz`, com RLS ligado e sem políticas: só a chave de serviço lê e grava.
-
-1. No painel do Supabase, em Project Settings > API, copie a chave **service_role**. Ela é secreta.
-2. No `.env.local`, preencha `SUPABASE_SERVICE_ROLE_KEY` (a `SUPABASE_URL` já vem preenchida).
+1. Crie as tabelas: no painel do Supabase, abra SQL Editor > New query, cole o conteúdo de `supabase/schema.sql` e clique em Run. Ficam três tabelas (`fin_lancamentos`, `fin_programacoes`, `fin_pessoas`) com RLS ligado e sem políticas: só a chave de serviço lê e grava.
+2. Em Project Settings > API, copie a **Project URL** e a chave **service_role** (secreta) para `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no `.env.local`.
 3. Envie o backup e passe a ler do banco:
 
 ```bash

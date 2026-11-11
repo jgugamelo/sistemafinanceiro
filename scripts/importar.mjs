@@ -97,6 +97,13 @@ for (const [nome, tipo] of [["contas_a_pagar.csv", "pagar"], ["contas_a_receber.
       frequencia: limpar(r["Frequência"]),
       valor: Math.abs(numero(r["VALOR_PROX_PARCELA"]) || numero(r["Valor"])),
       total: Math.abs(numero(r["Valor"])),
+      // parcelas que faltam: só para contas com fim; recorrentes ficam sem (null)
+      restantes: (() => {
+        if (limpar(r["Frequência"]) === "Uma única vez") return 1;
+        if (r["Fim Frequência"] !== "Sim") return null;
+        const prox = Math.abs(numero(r["VALOR_PROX_PARCELA"]) || numero(r["Valor"]));
+        return prox ? Math.max(1, Math.round(Math.abs(numero(r["Valor"])) / prox)) : 1;
+      })(),
     });
   }
 }

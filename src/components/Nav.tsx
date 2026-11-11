@@ -2,27 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icone, type NomeIcone } from "./ui/Icone";
 
-const ICONES: Record<string, string> = {
-  painel: "M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z",
-  relatorios: "M5 20V10m7 10V4m7 16v-7",
-  lancamentos: "M4 7h16M4 12h16M4 17h10",
-  contas: "M7 3v4m10-4v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z",
-  cadastros: "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1m17 0v-1a4 4 0 0 0-3-3.9M13 4.1a4 4 0 0 1 0 7.8M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
-};
-
-const ITENS = [
-  { href: "/", id: "painel", rotulo: "Painel", pronto: true },
-  { href: "/relatorios", id: "relatorios", rotulo: "Relatórios", pronto: true },
-  { href: "#", id: "lancamentos", rotulo: "Lançamentos", pronto: false },
-  { href: "#", id: "contas", rotulo: "Pagar e receber", pronto: false },
-  { href: "#", id: "cadastros", rotulo: "Cadastros", pronto: false },
+const ITENS: { href: string; icone: NomeIcone; rotulo: string; curto: string }[] = [
+  { href: "/", icone: "painel", rotulo: "Painel", curto: "Painel" },
+  { href: "/lancamentos", icone: "lancamentos", rotulo: "Lançamentos", curto: "Lançamentos" },
+  { href: "/contas", icone: "contas", rotulo: "Pagar e receber", curto: "Contas" },
+  { href: "/relatorios", icone: "relatorios", rotulo: "Relatórios", curto: "Relatórios" },
+  { href: "/cadastros", icone: "cadastros", rotulo: "Cadastros", curto: "Cadastros" },
 ];
 
-function Icone({ id }: { id: string }) {
+function Marca() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d={ICONES[id]} />
+    <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden>
+      <rect width="32" height="32" rx="9" fill="#0F3D2F" />
+      <path d="M6 20c3-5 6-5 10 0s7 5 10 0M6 14c3-5 6-5 10 0s7 5 10 0" fill="none" stroke="#E9D7A6" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -33,56 +27,55 @@ export function Nav() {
 
   return (
     <>
-      {/* Computador: barra lateral */}
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col bg-tinta px-4 py-6 text-white lg:flex">
-        <div className="mb-8 flex items-center gap-2 px-2">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-marca font-titulo text-sm font-bold">F</span>
-          <span className="font-titulo text-lg font-semibold">Financeiro</span>
-        </div>
+      {/* Computador: barra lateral clara; o verde fica reservado para o cartão de saldo */}
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[248px] flex-col border-r border-linha bg-white/70 px-4 py-6 backdrop-blur lg:flex">
+        <Link href="/" className="mb-9 flex items-center gap-3 px-2">
+          <Marca />
+          <span className="font-titulo text-[19px] font-semibold tracking-tight">Financeiro</span>
+        </Link>
         <nav className="flex flex-col gap-1" aria-label="Seções">
-          {ITENS.map((item) =>
-            item.pronto ? (
+          {ITENS.map((item) => {
+            const atual = ativo(item.href);
+            return (
               <Link
-                key={item.id}
+                key={item.href}
                 href={item.href}
-                aria-current={ativo(item.href) ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  ativo(item.href) ? "bg-white/10 text-white" : "text-white/65 hover:bg-white/5 hover:text-white"
+                aria-current={atual ? "page" : undefined}
+                className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold transition-colors ${
+                  atual ? "bg-cedula-claro text-cedula" : "text-tinta-suave hover:bg-fundo hover:text-tinta"
                 }`}
               >
-                <Icone id={item.id} />
+                <span className={`absolute -left-4 top-2 bottom-2 w-1 rounded-r-full transition-colors ${atual ? "bg-cedula" : "bg-transparent"}`} aria-hidden />
+                <Icone nome={item.icone} />
                 {item.rotulo}
               </Link>
-            ) : (
-              <span key={item.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/30">
-                <Icone id={item.id} />
-                {item.rotulo}
-                <span className="ml-auto whitespace-nowrap rounded-full border border-white/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide">em breve</span>
-              </span>
-            ),
-          )}
+            );
+          })}
         </nav>
       </aside>
 
       {/* Celular: barra inferior */}
       <nav
         aria-label="Seções"
-        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-linha bg-white/95 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-linha bg-white/90 backdrop-blur-lg lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {ITENS.filter((i) => i.pronto).map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            aria-current={ativo(item.href) ? "page" : undefined}
-            className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${
-              ativo(item.href) ? "text-marca" : "text-tinta/50"
-            }`}
-          >
-            <Icone id={item.id} />
-            {item.rotulo}
-          </Link>
-        ))}
+        {ITENS.map((item) => {
+          const atual = ativo(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={atual ? "page" : undefined}
+              className={`flex min-h-[62px] flex-col items-center justify-center gap-1 text-[11px] font-semibold ${atual ? "text-cedula" : "text-tinta-fraca"}`}
+            >
+              <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${atual ? "bg-cedula-claro" : ""}`}>
+                <Icone nome={item.icone} />
+              </span>
+              {item.curto}
+            </Link>
+          );
+        })}
       </nav>
     </>
   );

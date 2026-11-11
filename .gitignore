@@ -9,8 +9,3 @@ next-env.d.ts
 /data
 /backup
 *.csv
-.DS_Store
-node_modules/
-.env
-.env.*
-!.env.example

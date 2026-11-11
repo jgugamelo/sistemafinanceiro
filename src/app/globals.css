@@ -2,38 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-texto: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --font-titulo: ui-rounded, "SF Pro Rounded", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
 html {
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  @apply bg-papel text-tinta antialiased;
-  font-family: var(--font-texto);
+  @apply bg-fundo font-sans text-tinta antialiased;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
-.numero {
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-titulo);
+h1, h2, h3 {
+  @apply font-titulo;
+  font-variation-settings: "wdth" 92;
+  letter-spacing: -0.02em;
+}
+
+/* Valores em reais: algarismos de mesma largura, para alinhar nas listas */
+.valor {
+  font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: -0.01em;
 }
 
-.cartao {
-  @apply rounded-2xl border border-linha bg-white;
+@layer components {
+  .superficie {
+    @apply rounded-2xl border border-linha bg-white shadow-superficie;
+  }
+  .campo {
+    @apply block w-full rounded-xl border border-linha-forte bg-white px-3.5 py-2.5 text-[15px] text-tinta outline-none transition-[border-color,box-shadow] placeholder:text-tinta-fraca focus:border-cedula focus:ring-4 focus:ring-cedula/10;
+  }
+  .botao {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-[background-color,transform,box-shadow] active:scale-[.98] disabled:pointer-events-none disabled:opacity-60;
+  }
+  .botao-principal {
+    @apply botao bg-cedula text-white shadow-superficie hover:bg-cedula-medio;
+  }
+  .botao-secundario {
+    @apply botao border border-linha-forte bg-white text-tinta hover:border-tinta-fraca;
+  }
+  .botao-perigo {
+    @apply botao text-saida hover:bg-saida-claro;
+  }
 }
 
-.sem-barra::-webkit-scrollbar {
-  display: none;
-}
-.sem-barra {
-  scrollbar-width: none;
-}
+.sem-barra::-webkit-scrollbar { display: none; }
+.sem-barra { scrollbar-width: none; }
 
 :focus-visible {
-  outline: 2px solid #0f6b54;
+  outline: 2px solid #1d5a46;
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }

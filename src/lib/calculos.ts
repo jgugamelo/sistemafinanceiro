@@ -140,3 +140,30 @@ export function porVencimento(programacoes: Programacao[], tipo: "pagar" | "rece
     return { ...faixa, itens: daFaixa, total: daFaixa.reduce((s, p) => s + p.valor, 0) };
   });
 }
+
+/** Saldo de cada conta nos últimos dias, para o gráfico do cartão de saldo. */
+export function historicoSaldos(lancamentos: Lancamento[], hoje: string, dias = 90) {
+  const inicio = somarDias(hoje, -(dias - 1));
+  const datas = Array.from({ length: dias }, (_, i) => somarDias(inicio, i));
+  const indice = new Map(datas.map((d, i) => [d, i]));
+  const porConta = new Map<string, { conta: string; inicial: number; deltas: number[] }>();
+  for (const l of lancamentos) {
+    if (l.data > hoje) continue;
+    const c = porConta.get(l.conta) ?? { conta: l.conta, inicial: 0, deltas: Array(dias).fill(0) };
+    const i = indice.get(l.data);
+    if (i === undefined) c.inicial += l.valor;
+    else c.deltas[i] += l.valor;
+    porConta.set(l.conta, c);
+  }
+  const contas = [...porConta.values()]
+    .map((c) => ({
+      conta: c.conta,
+      inicial: Math.round(c.inicial * 100) / 100,
+      deltas: c.deltas.map((d) => Math.round(d * 100) / 100),
+      saldo: Math.round((c.inicial + c.deltas.reduce((s, d) => s + d, 0)) * 100) / 100,
+    }))
+    .sort((a, b) => b.saldo - a.saldo);
+  return { datas, contas };
+}
+
+export type HistoricoSaldos = ReturnType<typeof historicoSaldos>;

@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Lancamento, Pessoa, Programacao, Repositorio } from "../types";
+import type { ItemLista, Lancamento, Pessoa, Programacao, Repositorio, Sem } from "../types";
 
 let cliente: SupabaseClient | null = null;
 
@@ -19,7 +19,12 @@ const PAGINA = 1000; // limite padrão de linhas por consulta no Supabase
 /** Lê a tabela inteira, buscando as páginas de 1000 linhas em paralelo. */
 async function lerTudo(tabela: string, ordem: string): Promise<Record<string, unknown>[]> {
   const pagina = (inicio: number) =>
-    banco().from(tabela).select("*", inicio === 0 ? { count: "exact" } : undefined).order(ordem).order("id").range(inicio, inicio + PAGINA - 1);
+    banco()
+      .from(tabela)
+      .select("*", inicio === 0 ? { count: "exact" } : undefined)
+      .order(ordem)
+      .order("id")
+      .range(inicio, inicio + PAGINA - 1);
 
   const primeira = await pagina(0);
   if (primeira.error) throw new Error(`Supabase (${tabela}): ${primeira.error.message}`);
@@ -35,7 +40,16 @@ async function lerTudo(tabela: string, ordem: string): Promise<Record<string, un
   return linhas;
 }
 
+function checar(acao: string, resposta: { error: { message: string } | null }) {
+  if (resposta.error) throw new Error(`Não foi possível ${acao}: ${resposta.error.message}`);
+}
+
 const texto = (v: unknown) => (v == null ? "" : String(v));
+const dataOuNulo = (v: string) => (v ? v : null);
+
+const paraLancamento = (l: Sem<Lancamento>) => ({ ...l, competencia: dataOuNulo(l.competencia) });
+const paraProgramacao = (p: Sem<Programacao>) => ({ ...p, vencimento: dataOuNulo(p.vencimento) });
+const paraPessoa = (p: Sem<Pessoa>) => ({ ...p, inativo: p.inativo === "sim" });
 
 export const repositorioSupabase: Repositorio = {
   async lancamentos() {
@@ -69,6 +83,7 @@ export const repositorioSupabase: Repositorio = {
         frequencia: texto(p.frequencia),
         valor: Number(p.valor) || 0,
         total: Number(p.total) || 0,
+        restantes: p.restantes == null ? null : Number(p.restantes),
       }),
     );
   },
@@ -88,5 +103,44 @@ export const repositorioSupabase: Repositorio = {
         inativo: p.inativo ? "sim" : "",
       }),
     );
+  },
+  async listas() {
+    return (await lerTudo("fin_listas", "nome")).map(
+      (t): ItemLista => ({ id: texto(t.id), tipo: t.tipo as ItemLista["tipo"], nome: texto(t.nome), ativo: Boolean(t.ativo) }),
+    );
+  },
+
+  async inserirLancamentos(novos) {
+    checar("salvar o lançamento", await banco().from("fin_lancamentos").insert(novos.map(paraLancamento)));
+  },
+  async atualizarLancamento(id, dados) {
+    checar("atualizar o lançamento", await banco().from("fin_lancamentos").update(paraLancamento(dados)).eq("id", id));
+  },
+  async excluirLancamento(id) {
+    checar("excluir o lançamento", await banco().from("fin_lancamentos").delete().eq("id", id));
+  },
+
+  async inserirProgramacao(nova) {
+    checar("salvar a conta", await banco().from("fin_programacoes").insert(paraProgramacao(nova)));
+  },
+  async atualizarProgramacao(id, dados) {
+    checar("atualizar a conta", await banco().from("fin_programacoes").update(paraProgramacao(dados)).eq("id", id));
+  },
+  async excluirProgramacao(id) {
+    checar("excluir a conta", await banco().from("fin_programacoes").delete().eq("id", id));
+  },
+
+  async inserirPessoa(nova) {
+    checar("salvar o cadastro", await banco().from("fin_pessoas").insert(paraPessoa(nova)));
+  },
+  async atualizarPessoa(id, dados) {
+    checar("atualizar o cadastro", await banco().from("fin_pessoas").update(paraPessoa(dados)).eq("id", id));
+  },
+  async excluirPessoa(id) {
+    checar("excluir o cadastro", await banco().from("fin_pessoas").delete().eq("id", id));
+  },
+
+  async salvarItemLista(item) {
+    checar("salvar o item", await banco().from("fin_listas").upsert(item, { onConflict: "tipo,nome" }));
   },
 };
